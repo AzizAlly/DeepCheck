@@ -1,0 +1,85 @@
+﻿import os
+from pymongo import MongoClient
+import logging
+import certifi
+import ssl
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Student Information
+print(f"""
+{'='*60}
+DeepCheck - Database Connection
+Author: Aziz Ali
+Email: alyyaziz45@gmail.com
+Supervisor: Mr. Hassan
+University: KIUT
+{'='*60}
+""")
+
+# Your MongoDB connection string
+MONGO_URL = 'mongodb+srv://aziz45_db_user:%40zz1%40l%7Cy@cluster0.ij6amg8.mongodb.net/deepcheck?retryWrites=true&w=majority'
+
+logger.info('Connecting to MongoDB Atlas...')
+
+try:
+    # Method 1: Use certifi for SSL certificates
+    logger.info('Method 1: Using certifi...')
+    client = MongoClient(
+        MONGO_URL,
+        serverSelectionTimeoutMS=10000,
+        tlsCAFile=certifi.where(),
+        tls=True
+    )
+    client.admin.command('ping')
+    logger.info('✅ Connected to MongoDB with certifi!')
+    
+except Exception as e1:
+    logger.warning(f'Method 1 failed: {e1}')
+    
+    try:
+        # Method 2: Less strict SSL (for development)
+        logger.info('Method 2: Using relaxed SSL...')
+        client = MongoClient(
+            MONGO_URL,
+            serverSelectionTimeoutMS=10000,
+            tls=True,
+            tlsAllowInvalidCertificates=True
+        )
+        client.admin.command('ping')
+        logger.info('✅ Connected to MongoDB with relaxed SSL!')
+        
+    except Exception as e2:
+        logger.warning(f'Method 2 failed: {e2}')
+        
+        try:
+            # Method 3: No SSL verification
+            logger.info('Method 3: No SSL verification...')
+            client = MongoClient(
+                MONGO_URL.replace('mongodb+srv://', 'mongodb://'),
+                serverSelectionTimeoutMS=10000,
+                tls=False,
+                directConnection=False
+            )
+            client.admin.command('ping')
+            logger.info('✅ Connected to MongoDB without SSL!')
+            
+        except Exception as e3:
+            logger.error(f'❌ All connection methods failed: {e3}')
+            logger.error('Please check your network and MongoDB Atlas settings')
+            raise
+
+# Get database
+db = client['deepcheck']
+logger.info(f'✅ Using database: {db.name}')
+
+# Test connection and show collections
+try:
+    collections = db.list_collection_names()
+    logger.info(f'📚 Available collections: {collections}')
+except Exception as e:
+    logger.warning(f'Could not list collections: {e}')
+
+__all__ = ['db']
